@@ -27,20 +27,20 @@
    <widget class="QLCDNumber" name="thresholdTimeLCD">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>430</y>
-      <width>151</width>
-      <height>51</height>
+      <x>60</x>
+      <y>420</y>
+      <width>131</width>
+      <height>41</height>
      </rect>
     </property>
    </widget>
    <widget class="QPushButton" name="increaseThresholdButton">
     <property name="geometry">
      <rect>
-      <x>230</x>
-      <y>430</y>
-      <width>51</width>
-      <height>51</height>
+      <x>200</x>
+      <y>420</y>
+      <width>41</width>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
@@ -51,9 +51,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>430</y>
-      <width>51</width>
-      <height>51</height>
+      <y>420</y>
+      <width>41</width>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
@@ -81,6 +81,78 @@
     </property>
     <property name="text">
      <string>You have been staring at the screen for:</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>390</y>
+      <width>211</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Set your short threshold time (secs)</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="increaseThresholdButton_2">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>500</y>
+      <width>41</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>+</string>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="thresholdTimeLCD_2">
+    <property name="geometry">
+     <rect>
+      <x>60</x>
+      <y>500</y>
+      <width>131</width>
+      <height>41</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="decreaseThresholdButton_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>500</y>
+      <width>41</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>-</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_3">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>470</y>
+      <width>211</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Set your long threshold time (hrs)</string>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="currentTimeLCD_2">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>450</y>
+      <width>141</width>
+      <height>51</height>
+     </rect>
     </property>
    </widget>
   </widget>

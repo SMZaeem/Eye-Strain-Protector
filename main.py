@@ -17,9 +17,15 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
         # Now you can access your widgets using their object names
         self.graphicsView = self.findChild(QGraphicsView, 'graphicsView') # Use QGraphicsView
         self.thresholdTimeLCD = self.findChild(QLCDNumber, 'thresholdTimeLCD')
+        self.thresholdTimeLCD_2 = self.findChild(QLCDNumber, 'thresholdTimeLCD_2')
         self.increaseThresholdButton = self.findChild(QPushButton, 'increaseThresholdButton')
         self.decreaseThresholdButton = self.findChild(QPushButton, 'decreaseThresholdButton')
+        self.increaseThresholdButton_2 = self.findChild(QPushButton, 'increaseThresholdButton_2')
+        self.decreaseThresholdButton_2 = self.findChild(QPushButton, 'decreaseThresholdButton_2')
         self.currentTimeLCD = self.findChild(QLCDNumber, 'currentTimeLCD')
+
+        self.restingTimeLCD = self.findChild(QLCDNumber, 'currentTimeLCD_2')
+
         self.label = self.findChild(QLabel, 'label') # You have a QLabel named 'label' as well
 
         self.cap = cv2.VideoCapture(0)
@@ -28,8 +34,30 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
 
         self.staring_time = 0
         self.start_time = time.time()
-        self.threshold = 15
-        self.thresholdTimeLCD.display(self.threshold)
+        self.shortTermThreshold = 15
+        self.longTermThreshold = 7200
+        self.shortTermRest = 6
+        self.longTermRest = 60
+
+        self.short_break_start_time = 0
+        self.short_break_time = 0
+
+        self.looking_away_start_time = 0 
+        self.looking_away_duration = 0
+        self.should_reset_time = True
+        self.reset_staring_timer = False  # Added this line
+
+        # Add to __init__():
+        self.total_staring_time = 0
+        self.start_time = None
+
+        self.total_resting_time = 0
+        self.rest_start_time = None
+
+
+
+        self.thresholdTimeLCD.display(self.shortTermThreshold)
+        self.thresholdTimeLCD_2.display(self.longTermThreshold)
         self.is_looking = False
 
         self.timer = QTimer(self)
@@ -38,15 +66,27 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
 
         self.increaseThresholdButton.clicked.connect(self.increase_threshold)
         self.decreaseThresholdButton.clicked.connect(self.decrease_threshold)
+        
+        self.increaseThresholdButton_2.clicked.connect(self.increase_threshold_2)
+        self.decreaseThresholdButton_2.clicked.connect(self.decrease_threshold_2)
 
     def increase_threshold(self):
-        self.threshold += 5
-        self.thresholdTimeLCD.display(self.threshold)
+        self.shortTermThreshold += 5
+        self.thresholdTimeLCD.display(self.shortTermThreshold)
 
     def decrease_threshold(self):
-        if self.threshold > 5:
-            self.threshold -= 5
-            self.thresholdTimeLCD.display(self.threshold)
+        if self.shortTermThreshold > 5:
+            self.shortTermThreshold -= 5
+            self.thresholdTimeLCD.display(self.shortTermThreshold)
+    
+    def increase_threshold_2(self):
+        self.longTermThreshold += 5
+        self.thresholdTimeLCD_2.display(self.longTermThreshold)
+
+    def decrease_threshold_2(self):
+        if self.longTermThreshold > 5:
+            self.longTermThreshold -= 5
+            self.thresholdTimeLCD_2.display(self.longTermThreshold)
 
     def update_frame(self):
         ret, frame = self.cap.read()
@@ -63,17 +103,48 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
 
             if eyes_detected:
                 if not self.is_looking:
+                    # User just looked back
                     self.is_looking = True
-                    self.start_time = time.time()
+                    self.looking_away_start_time = 0
+                    self.looking_away_duration = 0
+
+                    # If reset flag is True, start a new staring session
+                    if self.should_reset_time:
+                        self.start_time = time.time()
+                        self.staring_time = 0
+                        self.should_reset_time = False
+
+                # While looking
                 self.staring_time = time.time() - self.start_time
+                # self.staring_time += 0.03  # Approximately 30ms per frame
                 self.currentTimeLCD.display(int(self.staring_time))
-                if self.staring_time > self.threshold:
-                    self.send_notification("Take a break!", f"You've been looking at the screen for {int(self.staring_time)} seconds.")
+                self.restingTimeLCD.display(0)
+
+                if self.staring_time > self.shortTermThreshold:
+                    self.send_notification("Take a short break!", f"You've been looking at the screen for {int(self.staring_time)} seconds.")
+                    self.staring_time = 0  # Reset after notification
                     self.start_time = time.time()
-            else:
-                self.is_looking = False
-                self.staring_time = 0
-                self.currentTimeLCD.display(0)
+
+            else:  # Not looking
+                if self.is_looking:
+                    # User just looked away
+                    self.is_looking = False
+                    self.looking_away_start_time = time.time()
+
+                if self.looking_away_start_time != 0:
+                    self.looking_away_duration = time.time() - self.looking_away_start_time
+                    self.restingTimeLCD.display(int(self.looking_away_duration))
+
+                    if self.looking_away_duration >= self.shortTermRest:
+                        # Reset staring time after resting long enough
+                        self.should_reset_time = True
+                        self.staring_time = 0
+                        self.currentTimeLCD.display(0)
+                        self.looking_away_start_time = 0
+                        self.looking_away_duration = 0
+
+
+
 
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             h, w, ch = frame.shape
@@ -90,7 +161,6 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
             message=message,
             timeout=10
         )
-        print(f"Notification sent successfully: {success}")
 
     def closeEvent(self, event):
         self.cap.release()
