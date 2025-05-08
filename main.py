@@ -34,10 +34,10 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
 
         self.staring_time = 0
         self.start_time = time.time()
-        self.shortTermThreshold = 15
-        self.longTermThreshold = 7200
-        self.shortTermRest = 6
-        self.longTermRest = 60
+        self.shortTermThreshold = 10  #20 mins
+        self.shortTermRest = 5  #20 secs
+        self.longTermThreshold = 20  #2 hrs
+        self.longTermRest = 1200  #20 mins
 
         self.short_break_start_time = 0
         self.short_break_time = 0
@@ -53,9 +53,11 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
 
         self.total_resting_time = 0
         self.rest_start_time = None
+        self.x = 0
 
 
-
+        # self.thresholdTimeLCD.display(self.shortTermThreshold/60)
+        # self.thresholdTimeLCD_2.display(self.longTermThreshold/3600)
         self.thresholdTimeLCD.display(self.shortTermThreshold)
         self.thresholdTimeLCD_2.display(self.longTermThreshold)
         self.is_looking = False
@@ -71,22 +73,22 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
         self.decreaseThresholdButton_2.clicked.connect(self.decrease_threshold_2)
 
     def increase_threshold(self):
-        self.shortTermThreshold += 5
-        self.thresholdTimeLCD.display(self.shortTermThreshold)
+        self.shortTermThreshold += 300
+        self.thresholdTimeLCD.display(self.shortTermThreshold/60)
 
     def decrease_threshold(self):
-        if self.shortTermThreshold > 5:
-            self.shortTermThreshold -= 5
-            self.thresholdTimeLCD.display(self.shortTermThreshold)
+        if self.shortTermThreshold > 1200:
+            self.shortTermThreshold -= 300
+            self.thresholdTimeLCD.display(self.shortTermThreshold/60)
     
     def increase_threshold_2(self):
-        self.longTermThreshold += 5
-        self.thresholdTimeLCD_2.display(self.longTermThreshold)
+        self.longTermThreshold += 1800
+        self.thresholdTimeLCD_2.display(self.longTermThreshold/3600)
 
     def decrease_threshold_2(self):
-        if self.longTermThreshold > 5:
-            self.longTermThreshold -= 5
-            self.thresholdTimeLCD_2.display(self.longTermThreshold)
+        if self.longTermThreshold > 3600:
+            self.longTermThreshold -= 1800
+            self.thresholdTimeLCD_2.display(self.longTermThreshold/3600)
 
     def update_frame(self):
         ret, frame = self.cap.read()
@@ -116,14 +118,21 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
 
                 # While looking
                 self.staring_time = time.time() - self.start_time
-                # self.staring_time += 0.03  # Approximately 30ms per frame
                 self.currentTimeLCD.display(int(self.staring_time))
                 self.restingTimeLCD.display(0)
 
+                
                 if self.staring_time > self.shortTermThreshold:
-                    self.send_notification("Take a short break!", f"You've been looking at the screen for {int(self.staring_time)} seconds.")
+                    self.x += self.shortTermThreshold                 
+                    if self.x >= self.longTermThreshold:
+                        self.x=0
+                        self.send_notification("Take a long break!", f"You've been looking at the screen for {int(self.staring_time)} seconds.")
+                    else:
+                        self.send_notification("Take a short break!", f"You've been looking at the screen for {int(self.staring_time)} seconds.")
                     self.staring_time = 0  # Reset after notification
                     self.start_time = time.time()
+
+
 
             else:  # Not looking
                 if self.is_looking:
@@ -142,8 +151,6 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
                         self.currentTimeLCD.display(0)
                         self.looking_away_start_time = 0
                         self.looking_away_duration = 0
-
-
 
 
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
