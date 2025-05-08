@@ -1,11 +1,13 @@
 from PyQt5 import uic
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QLCDNumber, QGraphicsView # Import QMainWindow and QGraphicsView
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QLCDNumber, QGraphicsView, QDialog # Import QMainWindow and QGraphicsView
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt, QTimer
 import cv2
 import time
 from plyer import notification
 import os
+# from long_break_notification import LongBreakNotification # Import the custom notification
+from long_break_notification import NotificationDialog
 
 class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
     def __init__(self):
@@ -34,10 +36,10 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
 
         self.staring_time = 0
         self.start_time = time.time()
-        self.shortTermThreshold = 10  #20 mins
-        self.shortTermRest = 5  #20 secs
-        self.longTermThreshold = 20  #2 hrs
-        self.longTermRest = 1200  #20 mins
+        self.shortTermThreshold = 1200  #20mins = 1200secs  #for test : 10
+        self.shortTermRest = 20  #20secs  #for test : 6
+        self.longTermThreshold = 7200 #2hrs = 120mins = 7200secs  #for test : 20
+        # self.longTermRest = 1200  
 
         self.short_break_start_time = 0
         self.short_break_time = 0
@@ -54,12 +56,18 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
         self.total_resting_time = 0
         self.rest_start_time = None
         self.x = 0
+        self.y = 20
+        self.snooze = False
 
+        # self.longBreakNotification = None # Initialize for custom notification
+        # self.reminder_timer = QTimer(self)
+        # self.reminder_timer.timeout.connect(self.trigger_long_break_again)
+        # self.remind_in_minutes = 5 # Store the reminder interval
 
-        # self.thresholdTimeLCD.display(self.shortTermThreshold/60)
-        # self.thresholdTimeLCD_2.display(self.longTermThreshold/3600)
-        self.thresholdTimeLCD.display(self.shortTermThreshold)
-        self.thresholdTimeLCD_2.display(self.longTermThreshold)
+        self.thresholdTimeLCD.display(self.shortTermThreshold/60)
+        self.thresholdTimeLCD_2.display(self.longTermThreshold/3600)
+        # self.thresholdTimeLCD.display(self.shortTermThreshold)  # for test
+        # self.thresholdTimeLCD_2.display(self.longTermThreshold)  # for test
         self.is_looking = False
 
         self.timer = QTimer(self)
@@ -89,6 +97,27 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
         if self.longTermThreshold > 3600:
             self.longTermThreshold -= 1800
             self.thresholdTimeLCD_2.display(self.longTermThreshold/3600)
+
+    def send_notification(self, title, message): # Updated to handle both plyer and custom
+        if title == "Take a long break!":
+            # self.show_long_break_notification(int(self.staring_time))
+            dialog = NotificationDialog(message="You have been looking at screen for a long time. Take a long break! Click remind me to get a reminder after 5 mins.")
+            result = dialog.exec_()
+            if result == QDialog.Accepted:
+                # print("User clicked OK")
+                self.x = 0
+                # self.y = 5
+                self.snooze = False
+            else:
+                # print("User clicked Remind me later")
+                self.y = self.y + 5
+                self.snooze = True
+        else:
+            notification.notify(
+                title=title,
+                message=message,
+                timeout=10
+            )
 
     def update_frame(self):
         ret, frame = self.cap.read()
@@ -121,13 +150,14 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
                 self.currentTimeLCD.display(int(self.staring_time))
                 self.restingTimeLCD.display(0)
 
-                
+                if self.snooze and self.x + self.staring_time >= self.y:
+                    self.send_notification("Take a long break!", f"Reminder notification.")
+
                 if self.staring_time > self.shortTermThreshold:
                     self.x += self.shortTermThreshold                 
-                    if self.x >= self.longTermThreshold:
-                        self.x=0
+                    if not self.snooze and self.x >= self.longTermThreshold:
                         self.send_notification("Take a long break!", f"You've been looking at the screen for {int(self.staring_time)} seconds.")
-                    else:
+                    elif not self.snooze:
                         self.send_notification("Take a short break!", f"You've been looking at the screen for {int(self.staring_time)} seconds.")
                     self.staring_time = 0  # Reset after notification
                     self.start_time = time.time()
@@ -162,12 +192,12 @@ class EyeTrackingApp(QMainWindow):  # Inherit from QMainWindow
             item = QtWidgets.QGraphicsPixmapItem(pixmap)
             self.graphicsView.scene().addItem(item)
 
-    def send_notification(self, title, message):
-        success = notification.notify(
-            title=title,
-            message=message,
-            timeout=10
-        )
+    # def send_notification(self, title, message):
+    #     success = notification.notify(
+    #         title=title,
+    #         message=message,
+    #         timeout=10
+    #     )
 
     def closeEvent(self, event):
         self.cap.release()
